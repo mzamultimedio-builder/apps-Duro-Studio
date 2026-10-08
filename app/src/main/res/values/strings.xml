@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Mi Radio App</string>
+    <string name="target_url">https://mzamultimedio.com.ar/default</string>
+</resources>

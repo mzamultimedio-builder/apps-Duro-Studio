@@ -1,0 +1,94 @@
+name: Build Mobile App
+
+on:
+  repository_dispatch:
+    types: [build_app_event]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Gradle Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Prepare Android Data
+        run: |
+          SLUG="${{ github.event.client_payload.slug }}"
+          APP_NAME="${{ github.event.client_payload.app_name }}"
+          TARGET_URL="${{ github.event.client_payload.target_url }}"
+          ICON_URL="${{ github.event.client_payload.icon_url }}"
+          
+          echo "Building app for: $APP_NAME ($SLUG)"
+          
+          # Reemplazar strings
+          sed -i "s|<string name=\"app_name\">.*</string>|<string name=\"app_name\">$APP_NAME</string>|g" app/src/main/res/values/strings.xml
+          sed -i "s|<string name=\"target_url\">.*</string>|<string name=\"target_url\">$TARGET_URL</string>|g" app/src/main/res/values/strings.xml
+          
+          # Reemplazar Application ID para que sea única
+          sed -i "s|applicationId = \".*\"|applicationId = \"com.mzamultimedio.app.$SLUG\"|g" app/build.gradle.kts
+          
+          # Descargar ícono (opcional)
+          if [ ! -z "$ICON_URL" ]; then
+            wget -qO icon.png "$ICON_URL" || true
+            if [ -f "icon.png" ]; then
+              # Necesitariamos Imagemagick para redimensionar (convert)
+              sudo apt-get install -y imagemagick
+              mkdir -p app/src/main/res/mipmap-xxxhdpi
+              convert icon.png -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
+            fi
+          fi
+
+      - name: Build APK
+        run: |
+          if [ -f "gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew assembleRelease
+          else
+            gradle assembleRelease
+          fi
+
+      - name: Upload APK to Releases Repo
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT_RELEASES }}
+        run: |
+          SLUG="${{ github.event.client_payload.slug }}"
+          APK_PATH="app/build/outputs/apk/release/app-release-unsigned.apk"
+          
+          # Solo si existe el APK
+          if [ -f "$APK_PATH" ]; then
+            mv $APK_PATH "$SLUG-app.apk"
+            
+            # Subir a Alex-Jardano/apps-Duro-Studio-Releases
+            # Creamos un release tag unico basado en el slug y timestamp
+            TAG="v1.0-${SLUG}-$(date +%s)"
+            gh release create "$TAG" "$SLUG-app.apk" \
+              --repo Alex-Jardano/apps-Duro-Studio-Releases \
+              --title "App: $SLUG" \
+              --notes "APK auto-generado para $SLUG"
+              
+            # Notificar a Laravel (Opcional, mediante curl)
+            CALLBACK_URL="${{ github.event.client_payload.callback_url }}"
+            if [ ! -z "$CALLBACK_URL" ]; then
+              DOWNLOAD_URL="https://github.com/Alex-Jardano/apps-Duro-Studio-Releases/releases/download/$TAG/$SLUG-app.apk"
+              curl -X POST -H "Content-Type: application/json" -d "{\"slug\":\"$SLUG\", \"download_url\":\"$DOWNLOAD_URL\", \"status\":\"ready\"}" $CALLBACK_URL
+            fi
+          else
+            echo "Error: APK not found"
+            exit 1
+          fi
