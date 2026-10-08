@@ -4,6 +4,11 @@ on:
   repository_dispatch:
     types: [build_app_event]
 
+# Esto fuerza a GitHub a encolar y ejecutar de a UNO por vez (para no saturar)
+concurrency:
+  group: build-app
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
