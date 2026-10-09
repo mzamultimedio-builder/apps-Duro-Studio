@@ -41,8 +41,9 @@ jobs:
           sed -i "s|<string name=\"app_name\">.*</string>|<string name=\"app_name\">$APP_NAME</string>|g" app/src/main/res/values/strings.xml
           sed -i "s|<string name=\"target_url\">.*</string>|<string name=\"target_url\">$TARGET_URL</string>|g" app/src/main/res/values/strings.xml
           
-          # Reemplazar Application ID para que sea única
-          sed -i "s|applicationId = \".*\"|applicationId = \"com.mzamultimedio.app.$SLUG\"|g" app/build.gradle.kts
+          # Android NO permite guiones en los package names, los reemplazamos por guiones bajos
+          SANITIZED_SLUG=$(echo "$SLUG" | tr '-' '_')
+          sed -i "s|applicationId = \".*\"|applicationId = \"com.mzamultimedio.app.$SANITIZED_SLUG\"|g" app/build.gradle.kts
           
           # Descargar ícono (opcional)
           if [ ! -z "$ICON_URL" ]; then
