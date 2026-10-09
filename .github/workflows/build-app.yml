@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -83,14 +83,14 @@ jobs:
             # Creamos un release tag unico basado en el slug y timestamp
             TAG="v1.0-${SLUG}-$(date +%s)"
             gh release create "$TAG" "$SLUG-app.apk" \
-              --repo Alex-Jardano/apps-Duro-Studio-Releases \
+              --repo mzamultimedio-builder/apps-Duro-Studio \
               --title "App: $SLUG" \
               --notes "APK auto-generado para $SLUG"
               
             # Notificar a Laravel (Opcional, mediante curl)
             CALLBACK_URL="${{ github.event.client_payload.callback_url }}"
             if [ ! -z "$CALLBACK_URL" ]; then
-              DOWNLOAD_URL="https://github.com/Alex-Jardano/apps-Duro-Studio-Releases/releases/download/$TAG/$SLUG-app.apk"
+              DOWNLOAD_URL="https://github.com/mzamultimedio-builder/apps-Duro-Studio/releases/download/$TAG/$SLUG-app.apk"
               curl -X POST -H "Content-Type: application/json" -d "{\"slug\":\"$SLUG\", \"download_url\":\"$DOWNLOAD_URL\", \"status\":\"ready\"}" $CALLBACK_URL
             fi
           else
