@@ -70,7 +70,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT_RELEASES }}
         run: |
           SLUG="${{ github.event.client_payload.slug }}"
-          APK_PATH="app/build/outputs/apk/release/app-release-unsigned.apk"
+          # Buscar cualquier archivo .apk que se haya generado en la carpeta release
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
           
           # Solo si existe el APK
           if [ -f "$APK_PATH" ]; then
