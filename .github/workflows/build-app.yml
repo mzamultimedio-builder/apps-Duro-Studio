@@ -1,4 +1,5 @@
 name: Build Mobile App
+run-name: Build App for ${{ github.event.client_payload.slug }}
 
 on:
   repository_dispatch:
