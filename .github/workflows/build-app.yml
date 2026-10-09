@@ -67,7 +67,7 @@ jobs:
 
       - name: Upload APK to Releases Repo
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT_RELEASES }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SLUG="${{ github.event.client_payload.slug }}"
           # Buscar cualquier archivo .apk que se haya generado en la carpeta release
